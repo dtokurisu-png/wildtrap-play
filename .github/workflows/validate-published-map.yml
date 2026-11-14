@@ -1,0 +1,42 @@
+name: Validate published WildTrap map
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'maps/**'
+      - 'map-loader.mjs'
+      - 'tests/map-loader.mjs'
+      - '.github/workflows/validate-published-map.yml'
+  workflow_dispatch:
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate the active immutable map snapshot
+        run: |
+          node --input-type=module <<'EOF'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const manifest=JSON.parse(fs.readFileSync('maps/manifest.json'));
+          assert.ok(manifest.activeVersion);
+          assert.equal(manifest.releases.filter(x=>x.id===manifest.activeVersion).length,1);
+          assert.equal(manifest.activePath,'maps/versions/'+manifest.activeVersion+'.json');
+          const active=fs.readFileSync(manifest.activePath,'utf8');
+          const current=fs.readFileSync('maps/current.json','utf8');
+          assert.deepEqual(JSON.parse(current),JSON.parse(active));
+          const scene=JSON.parse(active);
+          assert.equal(scene.heights.length,scene.resolution*scene.resolution);
+          assert.ok(scene.nodes.some(n=>n.kind==='playerSpawn'&&n.playerSlot===1));
+          for(const release of manifest.releases){
+            assert.ok(/^maps\/versions\/[a-zA-Z0-9-]+\.json$/.test(release.path));
+            assert.ok(fs.existsSync(release.path),'Version file missing: '+release.path);
+          }
+          console.log('PASS: Published map '+manifest.activeVersion+' has valid shape and independent history');
+          EOF
+      - name: Verify immutable session map loader
+        run: node tests/map-loader.mjs
