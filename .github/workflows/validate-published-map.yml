@@ -5,6 +5,10 @@ on:
     paths:
       - 'maps/**'
       - 'map-loader.mjs'
+      - 'index.html'
+      - 'play.mjs'
+      - 'adaptive-terrain-cuts.mjs'
+      - 'tests/browser-solo-flow.mjs'
       - 'tests/map-loader.mjs'
       - '.github/workflows/validate-published-map.yml'
   workflow_dispatch:
@@ -40,3 +44,14 @@ jobs:
           EOF
       - name: Verify immutable session map loader
         run: node tests/map-loader.mjs
+      - name: Validate JavaScript syntax
+        run: |
+          node --check play.mjs
+          node --check map-loader.mjs
+          node --check adaptive-terrain-cuts.mjs
+      - name: Start local game server
+        run: |
+          python3 -m http.server 8123 --bind 127.0.0.1 >/tmp/wildtrap-play-http.log 2>&1 &
+          sleep 2
+      - name: Test real solo flow in Chrome
+        run: node tests/browser-solo-flow.mjs
