@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#091d1a">
+<title>WildTrap Play · Prueba del recorrido en solitario</title>
+<style>
+:root{color-scheme:dark;--teal:#00ffdf;--surface:#0e2621;--border:#477e67;--muted:#b3cabc}*{box-sizing:border-box}body{margin:0;background:#081915;color:#eafff5;font:14px/1.45 system-ui,Segoe UI,Roboto,sans-serif;overflow:hidden}button,input{font:inherit}button{cursor:pointer;background:#194337;border:1px solid #57977b;color:#eafff5;border-radius:9px;padding:10px 14px;font-weight:650}button:hover:not(:disabled),button:focus-visible{border-color:var(--teal);background:#26664f}button:disabled{opacity:.46;cursor:not-allowed}button.primary{background:#008e78;color:#fff;border-color:#58e7c6}button.ghost{background:#133128}a{color:var(--teal)}#game{position:fixed;inset:0;width:100%;height:100%;display:block;outline:none}#shade{position:fixed;inset:0;z-index:5;display:grid;place-items:center;padding:16px;background:#061914b6;overflow:auto}#shade[hidden]{display:none}#panel{width:min(560px,100%);max-height:calc(100vh - 30px);overflow:auto;background:linear-gradient(145deg,#17392f,#0c211c);border:1px solid #659c81;border-radius:17px;box-shadow:0 20px 70px #0009;padding:25px}h1,h2,h3,p{margin:0}h1{font-size:27px;letter-spacing:2px;color:#d8fff3}h2{font-size:20px;color:#d7ffef}p{margin:9px 0;color:var(--muted)}.eyebrow{color:var(--teal);letter-spacing:2px;text-transform:uppercase;font-size:11px;font-weight:800}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:17px}.actions button{flex:1;min-width:130px}.divider{height:1px;background:#456955;margin:16px 0}.information{background:#0a241dc9;border:1px solid #386d59;padding:12px;border-radius:9px;margin-top:12px}.small{font-size:12px;color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}.tile{border:1px solid #47715f;background:#0e2e25;border-radius:12px;padding:13px}.tile strong{display:block;font-size:15px;margin:4px 0}.pill{font-size:11px;color:#bbffed;border:1px solid #648d79;border-radius:20px;padding:3px 7px;white-space:nowrap}.row{display:flex;align-items:center;justify-content:space-between;gap:8px}.row+.row{margin-top:9px}#hud{position:fixed;inset:0;z-index:2;pointer-events:none}#hud[hidden]{display:none}#topbar{position:absolute;top:14px;left:15px;right:15px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.hud-box{background:#09231cdd;border:1px solid #43846a;padding:10px 13px;border-radius:11px;backdrop-filter:blur(8px)}#statusLine{font-weight:750}#details{color:#b7d8c8;font-size:12px}#topbar button,#interact button,#bottom button{pointer-events:auto}#bottom{position:absolute;bottom:14px;left:15px;right:15px;display:flex;justify-content:space-between;align-items:flex-end;gap:12px}#interact{position:absolute;left:50%;bottom:110px;transform:translateX(-50%);pointer-events:auto;text-align:center;min-width:180px}#interact[hidden]{display:none}#interact button{border-color:#00caa5;box-shadow:0 0 23px #00ffd02f}#mission{position:absolute;right:15px;top:95px;max-width:285px}#mission[hidden]{display:none}#mission strong{color:var(--teal)}#coords{font-variant-numeric:tabular-nums}#toast{position:fixed;top:84px;left:50%;transform:translateX(-50%);max-width:min(94vw,550px);background:#14362f;border:1px solid #4a9e7a;border-radius:10px;padding:10px 14px;z-index:9;display:none;text-align:center}#toast.show{display:block}#reticle{position:absolute;left:50%;top:50%;width:5px;height:5px;border:1px solid #f7fffb;border-radius:50%;opacity:.6}#help{max-width:420px}#version{color:#9abaaa;font-size:11px;margin-top:12px}kbd{font-size:12px;border:1px solid #63917c;background:#193e31;border-radius:4px;padding:0 4px}@media(max-width:610px){#panel{padding:17px}h1{font-size:22px}#mission{top:110px;max-width:180px;font-size:12px}#topbar .hud-box{max-width:62%}#bottom .hud-box{max-width:65%}#help{font-size:11px}}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
+</head>
+<body>
+<canvas id="game" tabindex="0" aria-label="Vista 3D de WildTrap Play"></canvas>
+<div id="hud" hidden>
+ <div id="topbar">
+  <div class="hud-box"><div id="statusLine">Habitación · Explorador</div><div id="details">Demo en solitario · sin red</div></div>
+  <div class="hud-box"><button id="menuButton" type="button">☰ Menú</button></div>
+ </div>
+ <section id="mission" class="hud-box" hidden><strong>Misión de cacería</strong><p id="missionInfo" class="small"></p></section>
+ <div id="interact" hidden><button id="interactButton" type="button">E · Interactuar</button></div>
+ <div id="reticle"></div>
+ <div id="bottom"><div class="hud-box" id="help">W A S D · Moverse · Ratón arrastrado · Cámara · <kbd>E</kbd> Interactuar</div><div class="hud-box" id="coords">X 0 · Z 0</div></div>
+</div>
+<div id="shade"><section id="panel" role="dialog" aria-modal="true" aria-labelledby="panelTitle"></section></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<script type="module" src="./play.mjs?v=0.1.0"></script>
+</body>
+</html>
