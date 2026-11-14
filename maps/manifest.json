@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "activeVersion": "v001",
+  "activePath": "maps/versions/v001.json",
+  "publishedAt": "2026-11-14T00:00:00Z",
+  "releases": [
+    {
+      "id": "v001",
+      "path": "maps/versions/v001.json",
+      "source": "wildtrap-escenario (1).json",
+      "notes": "Initial user-approved baseline: 630x630; 1 player spawn; 1 cave"
+    }
+  ]
+}
