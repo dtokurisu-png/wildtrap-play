@@ -393,3 +393,32 @@ function frame(){
 }
 buildLobby();welcome();resize();frame();
 loadAvatar();
+// Optional deterministic browser smoke flow; never runs in normal gameplay.
+if(new URLSearchParams(location.search).get('smoke')==='solo'){
+ (async()=>{
+  try{
+   $('welcomeStart').click();
+   avatar.position.set(0,0,-7.5);
+   interaction();
+   if(state.screen!=='door')throw Error('Door interaction did not open');
+   $('doorHunt').click();
+   if(state.screen!=='hunt')throw Error('Hunt selection did not open');
+   $('chooseSolo').click();
+   const deadline=Date.now()+25000;
+   while(state.screen==='loading'&&Date.now()<deadline)await new Promise(r=>setTimeout(r,150));
+   if(state.screen!=='room')throw Error('Local room creation: '+state.screen);
+   $('startMission').click();
+   if(state.area!=='hunt'||state.screen!=='mission'||!state.session?.mapVersion)
+    throw Error('Hunt scene did not appear with frozen map');
+   $('missionContinue').click();
+   if(state.screen!=='none')throw Error('Mission conditions did not close');
+   document.documentElement.dataset.smoke='PASS';
+   document.documentElement.dataset.smokeVersion=state.session.mapVersion;
+  }catch(error){
+   document.documentElement.dataset.smoke='FAIL';
+   document.documentElement.dataset.smokeError=error.message;
+   console.error(error);
+  }
+ })();
+}
+
