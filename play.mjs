@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {getMapManifest,loadPublishedMap,pinSessionMapVersion,WILDTRAP_SHARED_ASSETS} from './map-loader.mjs';
 import {buildAdaptiveTerrain} from './adaptive-terrain-cuts.mjs';
+import {createCameraOcclusion} from './camera-occlusion.mjs';
 
 const $=id=>document.getElementById(id);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -19,6 +20,7 @@ const camera=new THREE.PerspectiveCamera(65,1,.08,1600);
 const clock=new THREE.Clock();
 const stage=new THREE.Group();scene.add(stage);
 const avatar=new THREE.Group();avatar.name='Explorador 1 WT';scene.add(avatar);
+const occlusion=createCameraOcclusion({THREE,environment:stage,player:avatar,camera});
 const keys=new Set();
 const gltfLoader=new GLTFLoader();
 const state={area:'home',screen:'welcome',session:null,version:null,sceneData:null,spawn:null,
@@ -39,7 +41,7 @@ function textTexture(text,bg='#113d31',fg='#d6fff1'){
 }
 function sign(parent,label,x,y,z){const mat=new THREE.MeshBasicMaterial({map:textTexture(label),side:THREE.DoubleSide});
  const plane=new THREE.Mesh(new THREE.PlaneGeometry(3.8,.95),mat);plane.position.set(x,y,z);parent.add(plane);return plane;}
-function clearStage(){while(stage.children.length){const item=stage.children[0];stage.remove(item);
+function clearStage(){occlusion.reset();while(stage.children.length){const item=stage.children[0];stage.remove(item);
  item.traverse?.(node=>{node.geometry?.dispose?.();if(node.material&&node.userData?.disposeMaterial){node.material.dispose?.();}});}
 }
 function buildLobby(){
@@ -389,6 +391,7 @@ function frame(){
  const desired=avatar.position.clone().addScaledVector(fwd,-5.5).add(new THREE.Vector3(.45,2.9+state.pitch*3,0));
  state.lookTarget.lerp(avatar.position.clone().addScaledVector(fwd,2.0).add(new THREE.Vector3(0,1.5-state.pitch*1.5,0)),1-Math.exp(-dt*10));
  camera.position.lerp(desired,1-Math.exp(-dt*8));camera.lookAt(state.lookTarget);
+ occlusion.update(dt);
  renderer.render(scene,camera);
 }
 buildLobby();welcome();resize();frame();
