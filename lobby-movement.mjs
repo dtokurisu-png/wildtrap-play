@@ -7,5 +7,6 @@ export function lobbyMovementDirection(forward,lateral){
  return {x,z,moving:true,rotation:-Math.atan2(x,-z)};
 }
 export function shouldRunAnimation({area,moving,forwardKey}){
- return Boolean(moving&&(area==='home'||forwardKey));
+ // The same movement clip is now shared by home and the hunting map.
+ return Boolean(moving);
 }
