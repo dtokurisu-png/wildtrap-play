@@ -4,7 +4,7 @@ const executable=['google-chrome','google-chrome-stable','chromium'].find(c=>
  spawnSync('which',[c],{encoding:'utf8'}).status===0);
 assert.ok(executable,'Chrome browser is required');
 const base=process.env.WILDTRAP_PLAY_TEST_URL||'http://127.0.0.1:8123/';
-for(const [name,url] of [['lobby',base],['solo',base+'?smoke=solo'],['room-camera',base+'?smoke=room-camera']]){
+for(const [name,url] of [['lobby',base],['solo',base+'?smoke=solo'],['room-camera',base+'?smoke=room-camera'],['hunt-directions',base+'?smoke=hunt-directions']]){
  const r=spawnSync(executable,[
   '--headless','--no-sandbox','--disable-dev-shm-usage','--disable-gpu',
   '--enable-unsafe-swiftshader','--use-gl=angle','--use-angle=swiftshader',
@@ -19,6 +19,14 @@ for(const [name,url] of [['lobby',base],['solo',base+'?smoke=solo'],['room-camer
   const reason=html.match(/data-room-camera-error="([^"]+)"/)?.[1];
   console.log('Room camera movement test',status,reason||'');
   assert.equal(status,'PASS','Moving player broke camera: '+reason);
+ }
+ if(name==='hunt-directions'){
+  const status=html.match(/data-hunt-directions="([^"]+)"/)?.[1];
+  const count=html.match(/data-hunt-directions-checked="([^"]+)"/)?.[1];
+  const reason=html.match(/data-hunt-directions-error="([^"]+)"/)?.[1];
+  console.log('Hunt 8-way movement test',status,count,reason||'');
+  assert.equal(status,'PASS','Hunt movement, orientation or run failed: '+(reason||'never finished'));
+  assert.equal(count,'8');
  }
  if(name==='solo'){
   const status=html.match(/data-smoke="([^"]+)"/)?.[1];
