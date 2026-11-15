@@ -13,6 +13,6 @@ for(const [name,forward,lateral] of [
  assert.equal(shouldRunAnimation({area:'home',moving:true,forwardKey:forward>0}),true,name+' plays run in lobby');
 }
 assert.equal(shouldRunAnimation({area:'home',moving:false,forwardKey:true}),false);
-assert.equal(shouldRunAnimation({area:'hunt',moving:true,forwardKey:false}),false,'Hunting behavior remains unchanged');
+assert.equal(shouldRunAnimation({area:'hunt',moving:true,forwardKey:false}),true,'Hunt runs even when strafing or reversing');
 assert.equal(shouldRunAnimation({area:'hunt',moving:true,forwardKey:true}),true);
-console.log('PASS: lobby run animation for W/A/S/D and all diagonals; facing and hunt unaffected');
+console.log('PASS: common running clip for all directions in both lobby and hunt');
