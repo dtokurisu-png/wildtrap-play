@@ -3,7 +3,7 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {getMapManifest,loadPublishedMap,pinSessionMapVersion,WILDTRAP_SHARED_ASSETS} from './map-loader.mjs';
 import {buildAdaptiveTerrain} from './adaptive-terrain-cuts.mjs';
 import {createCameraOcclusion} from './camera-occlusion.mjs';
-import {roomCameraPose,roomCameraNeedsRotation,ROOM_CAMERA_FOCUS_HEIGHT} from './room-camera.mjs';
+import {roomCameraPose} from './room-camera.mjs';
 import {shouldRunAnimation} from './lobby-movement.mjs';
 import {movementAxes,movementHeading} from './playtest-movement.mjs';
 import {inPlaceClip} from './playtest-animation.mjs';
@@ -411,18 +411,11 @@ function frame(){
  }
  $('coords').textContent='X '+avatar.position.x.toFixed(1)+' · Z '+avatar.position.z.toFixed(1);
  if(state.area==='home'){
-  // A mounted surveillance camera: no translation at all in the room.
-  // Preserve its exact current orientation until the avatar nears a screen edge.
-  const pose=roomCameraPose(avatar.position);
+  // Fixed interior position; rotate smoothly only as the player leaves the frame's dead zone.
+  const pose=roomCameraPose(avatar.position,state.lookTarget);
   camera.position.set(pose.position.x,pose.position.y,pose.position.z);
-  camera.updateMatrixWorld();
-  const avatarScreen=avatar.position.clone().add(new THREE.Vector3(0,ROOM_CAMERA_FOCUS_HEIGHT,0)).project(camera);
-  if(roomCameraNeedsRotation(avatarScreen.x,avatarScreen.y)){
-   const wanted=new THREE.Matrix4().lookAt(camera.position,
-    new THREE.Vector3(pose.target.x,pose.target.y,pose.target.z),camera.up);
-   const wantedRotation=new THREE.Quaternion().setFromRotationMatrix(wanted);
-   camera.quaternion.slerp(wantedRotation,1-Math.exp(-dt*2.1));
-  }
+  state.lookTarget.lerp(new THREE.Vector3(pose.target.x,pose.target.y,pose.target.z),1-Math.exp(-dt*5));
+  camera.lookAt(state.lookTarget);
  }else{
   const fwd=new THREE.Vector3(Math.sin(state.yaw),0,-Math.cos(state.yaw));
   const desired=avatar.position.clone().addScaledVector(fwd,-5.5).add(new THREE.Vector3(.45,2.9+state.pitch*3,0));
