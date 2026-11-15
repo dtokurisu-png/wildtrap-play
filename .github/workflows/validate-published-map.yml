@@ -7,6 +7,8 @@ on:
       - 'map-loader.mjs'
       - 'index.html'
       - 'play.mjs'
+      - 'lobby-movement.mjs'
+      - 'tests/lobby-movement.mjs'
       - 'room-camera.mjs'
       - 'tests/room-camera.mjs'
       - 'camera-occlusion.mjs'
@@ -51,6 +53,7 @@ jobs:
       - name: Validate JavaScript syntax
         run: |
           node --check play.mjs
+          node --check lobby-movement.mjs
           node --check room-camera.mjs
           node --check camera-occlusion.mjs
           node --check map-loader.mjs
@@ -63,5 +66,7 @@ jobs:
           sleep 2
       - name: Test fixed room-camera invariants
         run: node tests/room-camera.mjs
+      - name: Test lobby movement and eight-way run animation
+        run: node tests/lobby-movement.mjs
       - name: Test real solo flow in Chrome
         run: node tests/browser-solo-flow.mjs
