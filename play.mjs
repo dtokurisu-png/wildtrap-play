@@ -415,6 +415,40 @@ function frame(){
  }
  occlusion.update(dt);
  renderer.render(scene,camera);
+ // Browser E2E: exercise actual hunting movement and animation in 8 directions.
+ if(state.smokeHuntDirections){
+  const test=state.smokeHuntDirections;
+  const directions=[['KeyW'],['KeyS'],['KeyA'],['KeyD'],
+   ['KeyW','KeyA'],['KeyW','KeyD'],['KeyS','KeyA'],['KeyS','KeyD']];
+  const activeKeys=directions[test.index];
+  if(!activeKeys){
+   keys.clear();
+   document.documentElement.dataset.huntDirections='PASS';
+   document.documentElement.dataset.huntDirectionsChecked='8';
+   state.smokeHuntDirections=null;
+  }else if(test.frames===0){
+   keys.clear();for(const key of activeKeys)keys.add(key);
+   test.before=avatar.position.clone();test.frames++;
+  }else if(test.frames<8){
+   test.frames++;
+  }else{
+   const change=avatar.position.clone().sub(test.before);
+   const actual=new THREE.Vector2(change.x,change.z);
+   const expected=movementAxes(new Set(activeKeys),state.yaw);
+   const dot=actual.x*expected.x+actual.y*expected.z;
+   const length=actual.length();
+   const heading=movementHeading(actual.x,actual.y);
+   const difference=Math.atan2(Math.sin(avatar.rotation.y+heading),Math.cos(avatar.rotation.y+heading));
+   const hasAnimation=!state.mixer||state.running;
+   if(length<1e-4||dot/length<.999||Math.abs(difference)>.001||!hasAnimation){
+    document.documentElement.dataset.huntDirections='FAIL';
+    document.documentElement.dataset.huntDirectionsError='Falló '+activeKeys.join('+')+
+     ' · desplazamiento '+length.toFixed(5)+' · orientación '+difference.toFixed(4)+
+     ' · animación '+hasAnimation;
+    keys.clear();state.smokeHuntDirections=null;
+   }else{test.index++;test.frames=0;keys.clear();}
+  }
+ }
  if(state.smokeRoomCameraStart){
   const origin=state.smokeRoomCameraStart;
   if(avatar.position.distanceTo(origin)>.25){
@@ -440,7 +474,7 @@ if(new URLSearchParams(location.search).get('smoke')==='room-camera'){
  keys.add('KeyW');
 }
 // Optional deterministic browser smoke flow; never runs in normal gameplay.
-if(new URLSearchParams(location.search).get('smoke')==='solo'){
+if(['solo','hunt-directions'].includes(new URLSearchParams(location.search).get('smoke'))){
  (async()=>{
   try{
    $('welcomeStart').click();
@@ -458,6 +492,8 @@ if(new URLSearchParams(location.search).get('smoke')==='solo'){
     throw Error('Hunt scene did not appear with frozen map');
    $('missionContinue').click();
    if(state.screen!=='none')throw Error('Mission conditions did not close');
+   if(new URLSearchParams(location.search).get('smoke')==='hunt-directions')
+    state.smokeHuntDirections={index:0,frames:0,before:null};
    document.documentElement.dataset.smoke='PASS';
    document.documentElement.dataset.smokeVersion=state.session.mapVersion;
   }catch(error){
