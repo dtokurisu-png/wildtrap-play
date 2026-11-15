@@ -399,7 +399,7 @@ function frame(){
  // diagonals); the character turns to match travel. Hunting retains
  // its previous W-only run trigger until its animations are designed.
  // The same in-place run clip plays for all eight directions in both areas.
- animateAvatar(moving);
+ animateAvatar(shouldRunAnimation({area:state.area,moving,forwardKey:keys.has('KeyW')||keys.has('ArrowUp')}));
  if(state.mixer)state.mixer.update(dt);
  if(state.area==='home'&&!open){
   const nearDoor=getDoorDistance()<3.9,nearPet=getPetDistance()<2.8,nearBed=getBedDistance()<3.1;
