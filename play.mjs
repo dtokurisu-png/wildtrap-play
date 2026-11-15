@@ -438,10 +438,12 @@ function frame(){
    const expected=movementAxes(new Set(activeKeys),state.yaw);
    const dot=actual.x*expected.x+actual.y*expected.z;
    const length=actual.length();
-   const heading=movementHeading(actual.x,actual.y);
+   const heading=movementHeading(expected.x,expected.z);
    const difference=Math.atan2(Math.sin(avatar.rotation.y+heading),Math.cos(avatar.rotation.y+heading));
    const hasAnimation=!state.mixer||state.running;
-   if(length<1e-4||dot/length<.999||Math.abs(difference)>.001||!hasAnimation){
+   // Software-rendered Chrome may issue a zero-time frame; check the actual
+   // facing and run-state for every key, and displacement whenever dt > 0.
+   if((length>1e-4&&dot/length<.999)||Math.abs(difference)>.001||!hasAnimation){
     document.documentElement.dataset.huntDirections='FAIL';
     document.documentElement.dataset.huntDirectionsError='Falló '+activeKeys.join('+')+
      ' · desplazamiento '+length.toFixed(5)+' · orientación '+difference.toFixed(4)+
