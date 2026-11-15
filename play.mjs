@@ -371,6 +371,7 @@ function frame(){
   const dx=(f*Math.sin(heading)+r*Math.cos(heading))*speed*dt;
   const dz=(-f*Math.cos(heading)+r*Math.sin(heading))*speed*dt;
   const x=avatar.position.x+dx,z=avatar.position.z+dz;
+  const oldX=avatar.position.x,oldZ=avatar.position.z;
   if(state.area==='home'){
    avatar.position.x=clamp(x,-10.25,10.25);
    avatar.position.z=clamp(z,-7.1,8.5);
@@ -382,11 +383,16 @@ function frame(){
    const ground=heightAt(state.sceneData,avatar.position.x,avatar.position.z);
    avatar.position.y=THREE.MathUtils.damp(avatar.position.y,ground,13,dt);
   }
-  // GLB visual is rotated PI to correct its authored +Z heading.
-  avatar.rotation.y=-Math.atan2(dx,-dz);
-  moving=true;
+  // Face the direction of *actual* travel, including diagonals.
+  // At room limits the player must not run against the wall in place.
+  const traveledX=avatar.position.x-oldX,traveledZ=avatar.position.z-oldZ;
+  moving=Math.hypot(traveledX,traveledZ)>1e-7;
+  if(moving)avatar.rotation.y=-Math.atan2(traveledX,-traveledZ);
  }
- animateAvatar(moving&&keys.has('KeyW'));
+ // In the room, all movement keys use the same run clip (W/A/S/D and
+ // diagonals); the character turns to match travel. Hunting retains
+ // its previous W-only run trigger until its animations are designed.
+ animateAvatar(moving&&(state.area==='home'||keys.has('KeyW')||keys.has('ArrowUp')));
  if(state.mixer)state.mixer.update(dt);
  if(state.area==='home'&&!open){
   const nearDoor=getDoorDistance()<3.9,nearPet=getPetDistance()<2.8,nearBed=getBedDistance()<3.1;
