@@ -7,6 +7,8 @@ on:
       - 'map-loader.mjs'
       - 'index.html'
       - 'play.mjs'
+      - 'room-camera.mjs'
+      - 'tests/room-camera.mjs'
       - 'camera-occlusion.mjs'
       - 'tests/camera-occlusion.mjs'
       - 'adaptive-terrain-cuts.mjs'
@@ -49,6 +51,7 @@ jobs:
       - name: Validate JavaScript syntax
         run: |
           node --check play.mjs
+          node --check room-camera.mjs
           node --check camera-occlusion.mjs
           node --check map-loader.mjs
           node --check adaptive-terrain-cuts.mjs
@@ -58,5 +61,7 @@ jobs:
         run: |
           python3 -m http.server 8123 --bind 127.0.0.1 >/tmp/wildtrap-play-http.log 2>&1 &
           sleep 2
+      - name: Test fixed room-camera invariants
+        run: node tests/room-camera.mjs
       - name: Test real solo flow in Chrome
         run: node tests/browser-solo-flow.mjs
