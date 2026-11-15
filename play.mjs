@@ -388,8 +388,16 @@ function frame(){
   // Face the direction of *actual* travel, including diagonals.
   // At room limits the player must not run against the wall in place.
   const traveledX=avatar.position.x-oldX,traveledZ=avatar.position.z-oldZ;
-  moving=Math.hypot(traveledX,traveledZ)>1e-7;
-  if(moving)avatar.rotation.y=-movementHeading(traveledX,traveledZ);
+  const bounds=state.area==='home'?{minX:-10.25,maxX:10.25,minZ:-7.1,maxZ:8.5}:
+   {minX:-state.sceneData.size*.5+1.5,maxX:state.sceneData.size*.5-1.5,
+    minZ:-state.sceneData.size*.5+1.5,maxZ:state.sceneData.size*.5-1.5};
+  // Some render frames have dt≈0. Treat a held key as moving when the
+  // requested direction is clear, rather than flickering to idle every frame.
+  const probe=.01;
+  const canAdvanceX=Math.abs(clamp(avatar.position.x+move.x*probe,bounds.minX,bounds.maxX)-avatar.position.x)>1e-7;
+  const canAdvanceZ=Math.abs(clamp(avatar.position.z+move.z*probe,bounds.minZ,bounds.maxZ)-avatar.position.z)>1e-7;
+  moving=canAdvanceX||canAdvanceZ||Math.hypot(traveledX,traveledZ)>1e-7;
+  if(moving)avatar.rotation.y=-movementHeading(move.x,move.z);
  }
  // Same in-place run clip on W/A/S/D and diagonals, in both areas.
  // Only the facing direction changes; running stops when movement stops.
