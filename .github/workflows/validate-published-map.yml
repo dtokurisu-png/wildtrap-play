@@ -8,6 +8,7 @@ on:
       - 'index.html'
       - 'play.mjs'
       - 'playtest-movement.mjs'
+      - 'playtest-animation.mjs'
       - 'lobby-movement.mjs'
       - 'tests/lobby-movement.mjs'
       - 'room-camera.mjs'
@@ -55,6 +56,7 @@ jobs:
         run: |
           node --check play.mjs
           node --check playtest-movement.mjs
+          node --check playtest-animation.mjs
           node --check lobby-movement.mjs
           node --check room-camera.mjs
           node --check camera-occlusion.mjs
