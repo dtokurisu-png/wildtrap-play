@@ -54,10 +54,13 @@ function buildLobby(){
  avatar.scale.setScalar(1);
  scene.background.setHex(0x1a342c);scene.fog=new THREE.FogExp2(0x1a342c,.012);
  const floor=box(23,.36,19,0x53654d);put(stage,floor,0,-.2,0);
- for(const [w,h,d,x,z] of [[23,5,.65,0,9.5],[.65,5,19,-11.5,0],[.65,5,19,11.5,0]]){
-  put(stage,box(w,h,d,0x485c48),x,2.4,z);
+ for(const [w,h,d,x,z] of [[23,9,.65,0,9.5],[.65,9,19,-11.5,0],[.65,9,19,11.5,0]]){
+  put(stage,box(w,h,d,0x485c48),x,4.45,z);
  }
- const rear=box(23,5,.75,0x425847);put(stage,rear,0,2.4,-9.5);
+ const rear=box(23,9,.75,0x425847);put(stage,rear,0,4.45,-9.5);
+  // Camera remains under the ceiling and within the room walls.
+  const ceiling=put(stage,box(23,.28,19,0x35493b),0,9.08,0);
+  ceiling.userData.noCameraFade=true;
  const door=box(4.25,4.2,.18,0x286f56);put(stage,door,0,2.18,-9.01);
  put(stage,box(4.75,.25,.4,0xd4a85e),0,4.42,-8.75);
  for(const x of [-2.45,2.45])put(stage,box(.3,4.3,.45,0xd4a85e),x,2.14,-8.78);
@@ -408,10 +411,10 @@ function frame(){
  }
  $('coords').textContent='X '+avatar.position.x.toFixed(1)+' · Z '+avatar.position.z.toFixed(1);
  if(state.area==='home'){
-  // Always the same angle and separation as at room spawn.
-  const pose=roomCameraPose(avatar.position);
+  // Fixed interior position; rotate smoothly only as the player leaves the frame's dead zone.
+  const pose=roomCameraPose(avatar.position,state.lookTarget);
   camera.position.set(pose.position.x,pose.position.y,pose.position.z);
-  state.lookTarget.set(pose.target.x,pose.target.y,pose.target.z);
+  state.lookTarget.lerp(new THREE.Vector3(pose.target.x,pose.target.y,pose.target.z),1-Math.exp(-dt*5));
   camera.lookAt(state.lookTarget);
  }else{
   const fwd=new THREE.Vector3(Math.sin(state.yaw),0,-Math.cos(state.yaw));
