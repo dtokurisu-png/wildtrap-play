@@ -430,7 +430,7 @@ function frame(){
   }else if(test.frames===0){
    keys.clear();for(const key of activeKeys)keys.add(key);
    test.before=avatar.position.clone();test.frames++;
-  }else if(test.frames<8){
+  }else if(test.frames<2){
    test.frames++;
   }else{
    const change=avatar.position.clone().sub(test.before);
