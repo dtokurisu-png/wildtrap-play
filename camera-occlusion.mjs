@@ -18,8 +18,8 @@ export function createCameraOcclusion({THREE,environment,player,camera}){
  const side=new THREE.Vector3();
  const hits=new Set();
  const states=new Map();
- const samples=[new THREE.Vector3(0,.48,0),new THREE.Vector3(0,1.05,0),
-  new THREE.Vector3(0,1.65,0)];
+ const samples=[{height:.5,offset:0},{height:1.15,offset:-.24},
+  {height:1.65,offset:.24}];
 
  function restore(mesh,state){
   mesh.material=state.original;
@@ -53,28 +53,24 @@ export function createCameraOcclusion({THREE,environment,player,camera}){
   camera.getWorldPosition(origin);
   player.updateWorldMatrix(true,false);
   camera.updateWorldMatrix(true,false);
+  environment.updateWorldMatrix(true,true);
   // Three sightlines avoid a thin railing or doorway obscuring the head.
   const right=new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,0);
-  for(const height of samples){
-   player.localToWorld(target.copy(height));
-   for(const offset of [-.24,0,.24]){
-    const end=target.clone().addScaledVector(right,offset);
-    direction.subVectors(end,origin);
-    const distance=direction.length();
-    if(distance<.3)continue;
-    direction.multiplyScalar(1/distance);
-    ray.set(origin,direction);
-    ray.near=.05;
-    ray.far=Math.max(.05,distance-.28);
-    // Only stage geometry; exclude avatar and the room/game UI.
-    for(const hit of ray.intersectObject(environment,true)){
-     const mesh=hit.object;
-     if(!mesh.isMesh||mesh.userData?.noCameraFade||!mesh.visible)continue;
-     // No transparent/sign sprites, helpers, or ghost preview overlays.
-     if(mesh.material&&
-      (Array.isArray(mesh.material)?mesh.material.every(m=>m?.opacity===0):mesh.material.opacity===0))continue;
-     hits.add(mesh);
-    }
+  for(const sample of samples){
+   player.localToWorld(target.set(0,sample.height,0));
+   target.addScaledVector(right,sample.offset);
+   direction.subVectors(target,origin);
+   const distance=direction.length();
+   if(distance<.3)continue;
+   direction.multiplyScalar(1/distance);
+   ray.set(origin,direction);
+   ray.near=.05;
+   ray.far=Math.max(.05,distance-.28);
+   // Only stage geometry; exclude avatar and UI.
+   for(const hit of ray.intersectObject(environment,true)){
+    const mesh=hit.object;
+    if(!mesh.isMesh||mesh.userData?.noCameraFade||!mesh.visible)continue;
+    hits.add(mesh);
    }
   }
   for(const mesh of hits)if(!states.has(mesh))beginFade(mesh);
