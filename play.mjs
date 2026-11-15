@@ -7,6 +7,7 @@ import {roomCameraPose} from './room-camera.mjs';
 import {shouldRunAnimation} from './lobby-movement.mjs';
 import {movementAxes,movementHeading} from './playtest-movement.mjs';
 import {inPlaceClip} from './playtest-animation.mjs';
+import {loadCorrectedExplorerRun} from './explorer-run-corrected.mjs?v=0.1.14';
 
 const $=id=>document.getElementById(id);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -200,7 +201,15 @@ async function loadAvatar(){
    const mixer=new THREE.AnimationMixer(gltf.scene);
    const clips=gltf.animations;
    state.mixer=mixer;state.idle=mixer.clipAction(inPlaceClip(clips[2]||clips[0]).clip);
-   state.run=mixer.clipAction(inPlaceClip(clips[4]||clips[2]||clips[0]).clip);
+   let correctedRun=null;
+   try{
+    correctedRun=await loadCorrectedExplorerRun(THREE,gltf);
+   }catch(error){
+    // The original fifth clip remains available if the corrected asset
+    // cannot be loaded; other animations and the explorer mesh are unchanged.
+    console.warn('WildTrap Play: carrera corregida no disponible:',error);
+   }
+   state.run=mixer.clipAction(inPlaceClip(correctedRun||clips[4]||clips[2]||clips[0]).clip);
    state.idle.play();
   }
   state.avatarReady=true;
