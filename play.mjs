@@ -411,6 +411,32 @@ function frame(){
 }
 buildLobby();welcome();resize();frame();
 loadAvatar();
+// Browser regression: moving in the room must never create NaN coordinates,
+// change the fixed camera distance, or block input to door interactions.
+if(new URLSearchParams(location.search).get('smoke')==='room-camera'){
+ (async()=>{
+  try{
+   $('welcomeStart').click();
+   const start=avatar.position.clone();
+   window.dispatchEvent(new KeyboardEvent('keydown',{code:'KeyW',bubbles:true}));
+   await new Promise(resolve=>setTimeout(resolve,650));
+   window.dispatchEvent(new KeyboardEvent('keyup',{code:'KeyW',bubbles:true}));
+   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+   const pose=roomCameraPose(avatar.position);
+   const shifted=start.distanceTo(avatar.position);
+   if(!(shifted>.2))throw Error('W did not move the player');
+   if(![avatar.position.x,avatar.position.y,avatar.position.z,camera.position.x,camera.position.y,camera.position.z].every(Number.isFinite))
+    throw Error('Non-finite player/camera position after moving');
+   if(camera.position.distanceTo(new THREE.Vector3(pose.position.x,pose.position.y,pose.position.z))>.001)
+    throw Error('Room camera failed to keep fixed follow distance');
+   if(state.area!=='home')throw Error('Movement unexpectedly changed area');
+   document.documentElement.dataset.roomCamera='PASS';
+  }catch(error){
+   document.documentElement.dataset.roomCamera='FAIL';
+   document.documentElement.dataset.roomCameraError=error.message;
+  }
+ })();
+}
 // Optional deterministic browser smoke flow; never runs in normal gameplay.
 if(new URLSearchParams(location.search).get('smoke')==='solo'){
  (async()=>{
