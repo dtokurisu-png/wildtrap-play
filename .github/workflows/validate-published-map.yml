@@ -7,6 +7,7 @@ on:
       - 'map-loader.mjs'
       - 'index.html'
       - 'play.mjs'
+      - 'playtest-movement.mjs'
       - 'lobby-movement.mjs'
       - 'tests/lobby-movement.mjs'
       - 'room-camera.mjs'
@@ -53,6 +54,7 @@ jobs:
       - name: Validate JavaScript syntax
         run: |
           node --check play.mjs
+          node --check playtest-movement.mjs
           node --check lobby-movement.mjs
           node --check room-camera.mjs
           node --check camera-occlusion.mjs
