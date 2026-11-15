@@ -48,6 +48,8 @@ function clearStage(){occlusion.reset();while(stage.children.length){const item=
 }
 function buildLobby(){
  clearStage();state.area='home';state.yaw=0;state.pitch=.24;
+ // Full-size avatar is reserved for the personal room.
+ avatar.scale.setScalar(1);
  scene.background.setHex(0x1a342c);scene.fog=new THREE.FogExp2(0x1a342c,.012);
  const floor=box(23,.36,19,0x53654d);put(stage,floor,0,-.2,0);
  for(const [w,h,d,x,z] of [[23,5,.65,0,9.5],[.65,5,19,-11.5,0],[.65,5,19,11.5,0]]){
@@ -150,6 +152,8 @@ async function addPrefab(node,map){
 }
 function buildHunt(map,spawn){
  clearStage();state.area='hunt';state.yaw=0;state.pitch=.25;
+ // Published hunting world: half the room avatar's size, regardless of GLB load timing.
+ avatar.scale.setScalar(.5);
  scene.background.setHex(0xb7cbbf);scene.fog=new THREE.FogExp2(0xa9c5b7,.0022);
  const ground=new THREE.Mesh(buildTerrainGeometry(map),new THREE.MeshLambertMaterial({vertexColors:true,side:THREE.DoubleSide}));
  ground.name='Published map geometry';stage.add(ground);
@@ -364,7 +368,8 @@ function frame(){
  const length=Math.hypot(forward,lateral);
  let moving=false;
  if(!open&&length){
-  const speed=(keys.has('ShiftLeft')||keys.has('ShiftRight'))?6:3.8;
+  const roomSpeed=(keys.has('ShiftLeft')||keys.has('ShiftRight'))?6:3.8;
+  const speed=state.area==='home'?roomSpeed:roomSpeed*.5;
   const f=forward/length,r=lateral/length;
   // The room uses fixed world directions; the hunt follows camera yaw.
   // state.y was undefined and made player/camera coordinates NaN.
@@ -393,7 +398,8 @@ function frame(){
  // In the room, all movement keys use the same run clip (W/A/S/D and
  // diagonals); the character turns to match travel. Hunting retains
  // its previous W-only run trigger until its animations are designed.
- animateAvatar(shouldRunAnimation({area:state.area,moving,forwardKey:keys.has('KeyW')||keys.has('ArrowUp')}));
+ // The same in-place run clip plays for all eight directions in both areas.
+ animateAvatar(moving);
  if(state.mixer)state.mixer.update(dt);
  if(state.area==='home'&&!open){
   const nearDoor=getDoorDistance()<3.9,nearPet=getPetDistance()<2.8,nearBed=getBedDistance()<3.1;
