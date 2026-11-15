@@ -3,6 +3,7 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {getMapManifest,loadPublishedMap,pinSessionMapVersion,WILDTRAP_SHARED_ASSETS} from './map-loader.mjs';
 import {buildAdaptiveTerrain} from './adaptive-terrain-cuts.mjs';
 import {createCameraOcclusion} from './camera-occlusion.mjs';
+import {roomCameraPose} from './room-camera.mjs';
 
 const $=id=>document.getElementById(id);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -75,7 +76,10 @@ function buildLobby(){
  for(const [x,z] of [[-9,-7],[9,-7],[-9,7],[9,7]])
  put(stage,geo(new THREE.CylinderGeometry(.16,.24,3,8),0xcab780),x,1.5,z);
  avatar.position.set(0,0,5.7);
- state.lookTarget.copy(avatar.position).add(new THREE.Vector3(0,1.2,0));
+ const pose=roomCameraPose(avatar.position);
+ camera.position.set(pose.position.x,pose.position.y,pose.position.z);
+ state.lookTarget.set(pose.target.x,pose.target.y,pose.target.z);
+ camera.lookAt(state.lookTarget);
  updateHud();
 }
 function heightAt(map,x,z){
@@ -343,8 +347,8 @@ window.addEventListener('keydown',e=>{
 });
 window.addEventListener('keyup',e=>keys.delete(e.code));
 window.addEventListener('blur',()=>keys.clear());
-canvas.addEventListener('pointerdown',e=>{if(state.screen!=='none')return;state.drag=true;state.lastX=e.clientX;state.lastY=e.clientY;canvas.setPointerCapture?.(e.pointerId)});
-canvas.addEventListener('pointermove',e=>{if(!state.drag)return;state.yaw-=(e.clientX-state.lastX)*.0035;state.pitch=clamp(state.pitch+(e.clientY-state.lastY)*.0024,-.12,.7);state.lastX=e.clientX;state.lastY=e.clientY});
+canvas.addEventListener('pointerdown',e=>{if(state.screen!=='none'||state.area==='home')return;state.drag=true;state.lastX=e.clientX;state.lastY=e.clientY;canvas.setPointerCapture?.(e.pointerId)});
+canvas.addEventListener('pointermove',e=>{if(!state.drag||state.area==='home')return;state.yaw-=(e.clientX-state.lastX)*.0035;state.pitch=clamp(state.pitch+(e.clientY-state.lastY)*.0024,-.12,.7);state.lastX=e.clientX;state.lastY=e.clientY});
 canvas.addEventListener('pointerup',()=>state.drag=false);
 canvas.addEventListener('pointercancel',()=>state.drag=false);
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
@@ -361,8 +365,11 @@ function frame(){
  if(!open&&length){
   const speed=(keys.has('ShiftLeft')||keys.has('ShiftRight'))?6:3.8;
   const f=forward/length,r=lateral/length;
-  const dx=(f*Math.sin(state.yaw)+r*Math.cos(state.y))*speed*dt;
-  const dz=(-f*Math.cos(state.yaw)+r*Math.sin(state.yaw))*speed*dt;
+  // The room uses fixed world directions; the hunt follows camera yaw.
+  // state.y was undefined and made player/camera coordinates NaN.
+  const heading=state.area==='home'?0:state.yaw;
+  const dx=(f*Math.sin(heading)+r*Math.cos(heading))*speed*dt;
+  const dz=(-f*Math.cos(heading)+r*Math.sin(heading))*speed*dt;
   const x=avatar.position.x+dx,z=avatar.position.z+dz;
   if(state.area==='home'){
    avatar.position.x=clamp(x,-10.25,10.25);
@@ -387,10 +394,18 @@ function frame(){
   $('interactButton').textContent=nearDoor?'E · Cazar o ir a la tienda':nearPet?'E · Ver mascota':'E · Descansar';
  }
  $('coords').textContent='X '+avatar.position.x.toFixed(1)+' · Z '+avatar.position.z.toFixed(1);
- const fwd=new THREE.Vector3(Math.sin(state.yaw),0,-Math.cos(state.yaw));
- const desired=avatar.position.clone().addScaledVector(fwd,-5.5).add(new THREE.Vector3(.45,2.9+state.pitch*3,0));
- state.lookTarget.lerp(avatar.position.clone().addScaledVector(fwd,2.0).add(new THREE.Vector3(0,1.5-state.pitch*1.5,0)),1-Math.exp(-dt*10));
- camera.position.lerp(desired,1-Math.exp(-dt*8));camera.lookAt(state.lookTarget);
+ if(state.area==='home'){
+  // Always the same angle and separation as at room spawn.
+  const pose=roomCameraPose(avatar.position);
+  camera.position.set(pose.position.x,pose.position.y,pose.position.z);
+  state.lookTarget.set(pose.target.x,pose.target.y,pose.target.z);
+  camera.lookAt(state.lookTarget);
+ }else{
+  const fwd=new THREE.Vector3(Math.sin(state.yaw),0,-Math.cos(state.yaw));
+  const desired=avatar.position.clone().addScaledVector(fwd,-5.5).add(new THREE.Vector3(.45,2.9+state.pitch*3,0));
+  state.lookTarget.lerp(avatar.position.clone().addScaledVector(fwd,2.0).add(new THREE.Vector3(0,1.5-state.pitch*1.5,0)),1-Math.exp(-dt*10));
+  camera.position.lerp(desired,1-Math.exp(-dt*8));camera.lookAt(state.lookTarget);
+ }
  occlusion.update(dt);
  renderer.render(scene,camera);
 }
