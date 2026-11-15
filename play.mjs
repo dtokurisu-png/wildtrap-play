@@ -4,6 +4,7 @@ import {getMapManifest,loadPublishedMap,pinSessionMapVersion,WILDTRAP_SHARED_ASS
 import {buildAdaptiveTerrain} from './adaptive-terrain-cuts.mjs';
 import {createCameraOcclusion} from './camera-occlusion.mjs';
 import {roomCameraPose} from './room-camera.mjs';
+import {shouldRunAnimation} from './lobby-movement.mjs';
 
 const $=id=>document.getElementById(id);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -392,7 +393,7 @@ function frame(){
  // In the room, all movement keys use the same run clip (W/A/S/D and
  // diagonals); the character turns to match travel. Hunting retains
  // its previous W-only run trigger until its animations are designed.
- animateAvatar(moving&&(state.area==='home'||keys.has('KeyW')||keys.has('ArrowUp')));
+ animateAvatar(shouldRunAnimation({area:state.area,moving,forwardKey:keys.has('KeyW')||keys.has('ArrowUp')}));
  if(state.mixer)state.mixer.update(dt);
  if(state.area==='home'&&!open){
   const nearDoor=getDoorDistance()<3.9,nearPet=getPetDistance()<2.8,nearBed=getBedDistance()<3.1;
