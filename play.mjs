@@ -21,6 +21,13 @@ scene.fog=new THREE.FogExp2(0x142923,.012);
 const hemi=new THREE.HemisphereLight(0xe6fff5,0x40543c,2.1);scene.add(hemi);
 const sun=new THREE.DirectionalLight(0xffe5bc,2.25);sun.position.set(-85,140,90);scene.add(sun);
 const camera=new THREE.PerspectiveCamera(65,1,.08,1600);
+// Room-only optical zoom: perspective changes, never camera location or avatar scale.
+const ROOM_ZOOM_AT_SPAWN=2.35;
+const ROOM_ZOOM_MIN=1.05;
+const ROOM_ZOOM_MAX=4.65;
+const roomCameraAnchor=new THREE.Vector3(10.55,7.85,8.5);
+const roomSpawnHead=new THREE.Vector3(0,1.35,5.7);
+const roomReferenceDistance=roomCameraAnchor.distanceTo(roomSpawnHead);
 const clock=new THREE.Clock();
 const stage=new THREE.Group();scene.add(stage);
 const avatar=new THREE.Group();avatar.name='Explorador 1 WT';scene.add(avatar);
@@ -50,6 +57,7 @@ function clearStage(){occlusion.reset();while(stage.children.length){const item=
 }
 function buildLobby(){
  clearStage();state.area='home';state.yaw=0;state.pitch=.24;
+ camera.zoom=ROOM_ZOOM_AT_SPAWN;camera.updateProjectionMatrix();
  // Full-size avatar is reserved for the personal room.
  avatar.scale.setScalar(1);
  scene.background.setHex(0x1a342c);scene.fog=new THREE.FogExp2(0x1a342c,.012);
@@ -157,6 +165,8 @@ async function addPrefab(node,map){
 }
 function buildHunt(map,spawn){
  clearStage();state.area='hunt';state.yaw=0;state.pitch=.25;
+ // Never apply the room's lens adjustment to jungle gameplay.
+ camera.zoom=1;camera.updateProjectionMatrix();
  // Published hunting world: half the room avatar's size, regardless of GLB load timing.
  avatar.scale.setScalar(.5);
  scene.background.setHex(0xb7cbbf);scene.fog=new THREE.FogExp2(0xa9c5b7,.0022);
@@ -416,6 +426,13 @@ function frame(){
   camera.position.set(pose.position.x,pose.position.y,pose.position.z);
   state.lookTarget.lerp(new THREE.Vector3(pose.target.x,pose.target.y,pose.target.z),1-Math.exp(-dt*5));
   camera.lookAt(state.lookTarget);
+  // Keep the avatar approximately the same on-screen size at any distance.
+  // Zoom is purely optical; camera.position remains determined by roomCameraPose.
+  const head=avatar.position.clone().add(new THREE.Vector3(0,1.35,0));
+  const distance=camera.position.distanceTo(head);
+  const desiredZoom=clamp(ROOM_ZOOM_AT_SPAWN*distance/roomReferenceDistance,ROOM_ZOOM_MIN,ROOM_ZOOM_MAX);
+  const nextZoom=THREE.MathUtils.damp(camera.zoom,desiredZoom,5,dt);
+  if(Math.abs(nextZoom-camera.zoom)>1e-5){camera.zoom=nextZoom;camera.updateProjectionMatrix();}
  }else{
   const fwd=new THREE.Vector3(Math.sin(state.yaw),0,-Math.cos(state.yaw));
   const desired=avatar.position.clone().addScaledVector(fwd,-5.5).add(new THREE.Vector3(.45,2.9+state.pitch*3,0));
