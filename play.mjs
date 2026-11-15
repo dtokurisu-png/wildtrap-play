@@ -435,8 +435,8 @@ function frame(){
   if(Math.abs(nextZoom-camera.zoom)>1e-5){camera.zoom=nextZoom;camera.updateProjectionMatrix();}
  }else{
   const fwd=new THREE.Vector3(Math.sin(state.yaw),0,-Math.cos(state.yaw));
-  const desired=avatar.position.clone().addScaledVector(fwd,-5.5).add(new THREE.Vector3(.45,2.9+state.pitch*3,0));
-  state.lookTarget.lerp(avatar.position.clone().addScaledVector(fwd,2.0).add(new THREE.Vector3(0,1.5-state.pitch*1.5,0)),1-Math.exp(-dt*10));
+  const desired=avatar.position.clone().addScaledVector(fwd,-2.55).add(new THREE.Vector3(.28,1.9+state.pitch*.65,0));
+  state.lookTarget.lerp(avatar.position.clone().addScaledVector(fwd,1.35).add(new THREE.Vector3(0,1.15-state.pitch*.55,0)),1-Math.exp(-dt*10));
   camera.position.lerp(desired,1-Math.exp(-dt*8));camera.lookAt(state.lookTarget);
  }
  occlusion.update(dt);
