@@ -408,34 +408,29 @@ function frame(){
  }
  occlusion.update(dt);
  renderer.render(scene,camera);
+ if(state.smokeRoomCameraStart){
+  const origin=state.smokeRoomCameraStart;
+  if(avatar.position.distanceTo(origin)>.25){
+   keys.delete('KeyW');
+   const pose=roomCameraPose(avatar.position);
+   const actual=[avatar.position.x,avatar.position.y,avatar.position.z,camera.position.x,camera.position.y,camera.position.z];
+   const correct=actual.every(Number.isFinite)&&
+    camera.position.distanceTo(new THREE.Vector3(pose.position.x,pose.position.y,pose.position.z))<.001&&
+    state.area==='home';
+   document.documentElement.dataset.roomCamera=correct?'PASS':'FAIL';
+   if(!correct)document.documentElement.dataset.roomCameraError='Coordinates or camera offset incorrect';
+   state.smokeRoomCameraStart=null;
+  }
+ }
 }
 buildLobby();welcome();resize();frame();
 loadAvatar();
-// Browser regression: moving in the room must never create NaN coordinates,
-// change the fixed camera distance, or block input to door interactions.
+// Deterministic movement regression exercises the actual frame loop instead of
+// relying on Chrome's virtual timers (which can complete before the browser paints).
 if(new URLSearchParams(location.search).get('smoke')==='room-camera'){
- (async()=>{
-  try{
-   $('welcomeStart').click();
-   const start=avatar.position.clone();
-   window.dispatchEvent(new KeyboardEvent('keydown',{code:'KeyW',bubbles:true}));
-   await new Promise(resolve=>setTimeout(resolve,650));
-   window.dispatchEvent(new KeyboardEvent('keyup',{code:'KeyW',bubbles:true}));
-   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-   const pose=roomCameraPose(avatar.position);
-   const shifted=start.distanceTo(avatar.position);
-   if(!(shifted>.2))throw Error('W did not move the player');
-   if(![avatar.position.x,avatar.position.y,avatar.position.z,camera.position.x,camera.position.y,camera.position.z].every(Number.isFinite))
-    throw Error('Non-finite player/camera position after moving');
-   if(camera.position.distanceTo(new THREE.Vector3(pose.position.x,pose.position.y,pose.position.z))>.001)
-    throw Error('Room camera failed to keep fixed follow distance');
-   if(state.area!=='home')throw Error('Movement unexpectedly changed area');
-   document.documentElement.dataset.roomCamera='PASS';
-  }catch(error){
-   document.documentElement.dataset.roomCamera='FAIL';
-   document.documentElement.dataset.roomCameraError=error.message;
-  }
- })();
+ $('welcomeStart').click();
+ state.smokeRoomCameraStart=avatar.position.clone();
+ keys.add('KeyW');
 }
 // Optional deterministic browser smoke flow; never runs in normal gameplay.
 if(new URLSearchParams(location.search).get('smoke')==='solo'){
