@@ -7,6 +7,8 @@ on:
       - 'map-loader.mjs'
       - 'index.html'
       - 'play.mjs'
+      - 'camera-occlusion.mjs'
+      - 'tests/camera-occlusion.mjs'
       - 'adaptive-terrain-cuts.mjs'
       - 'tests/browser-solo-flow.mjs'
       - 'tests/map-loader.mjs'
@@ -47,8 +49,11 @@ jobs:
       - name: Validate JavaScript syntax
         run: |
           node --check play.mjs
+          node --check camera-occlusion.mjs
           node --check map-loader.mjs
           node --check adaptive-terrain-cuts.mjs
+      - name: Test camera obstruction transparency and restoration
+        run: node tests/camera-occlusion.mjs
       - name: Start local game server
         run: |
           python3 -m http.server 8123 --bind 127.0.0.1 >/tmp/wildtrap-play-http.log 2>&1 &
