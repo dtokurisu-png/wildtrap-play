@@ -6,6 +6,7 @@ import {createCameraOcclusion} from './camera-occlusion.mjs';
 import {roomCameraPose} from './room-camera.mjs';
 import {shouldRunAnimation} from './lobby-movement.mjs';
 import {movementAxes,movementHeading} from './playtest-movement.mjs';
+import {inPlaceClip} from './playtest-animation.mjs';
 
 const $=id=>document.getElementById(id);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -166,14 +167,6 @@ function buildHunt(map,spawn){
  state.lookTarget.copy(avatar.position).add(new THREE.Vector3(0,1.3,0));
  updateHud();
 }
-function inPlace(clip){
- const c=clip.clone();
- for(const track of c.tracks){
-  if(!/\.position$/.test(track.name)||!/hips|pelvis|root|armature/i.test(track.name)||track.getValueSize()!==3)continue;
-  for(let j=3;j<track.values.length;j+=3){track.values[j]=track.values[0];track.values[j+2]=track.values[2]}
- }
- return c;
-}
 function fallbackAvatar(){
  const shell=new THREE.Group();
  const body=geo(new THREE.CapsuleGeometry(.35,.85,5,9),0x57d9bb);body.position.y=.90;shell.add(body);
@@ -193,8 +186,8 @@ async function loadAvatar(){
   if(gltf.animations.length){
    const mixer=new THREE.AnimationMixer(gltf.scene);
    const clips=gltf.animations;
-   state.mixer=mixer;state.idle=mixer.clipAction(inPlace(clips[2]||clips[0]));
-   state.run=mixer.clipAction(inPlace(clips[4]||clips[0]));
+   state.mixer=mixer;state.idle=mixer.clipAction(inPlaceClip(clips[2]||clips[0]).clip);
+   state.run=mixer.clipAction(inPlaceClip(clips[4]||clips[2]||clips[0]).clip);
    state.idle.play();
   }
   state.avatarReady=true;
