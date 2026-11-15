@@ -5,6 +5,7 @@ import {buildAdaptiveTerrain} from './adaptive-terrain-cuts.mjs';
 import {createCameraOcclusion} from './camera-occlusion.mjs';
 import {roomCameraPose} from './room-camera.mjs';
 import {shouldRunAnimation} from './lobby-movement.mjs';
+import {movementAxes,movementHeading} from './playtest-movement.mjs';
 
 const $=id=>document.getElementById(id);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -363,19 +364,14 @@ function frame(){
  requestAnimationFrame(frame);
  const dt=Math.min(clock.getDelta(),.06);
  const open=state.screen!=='none';
- const forward=Number(keys.has('KeyW')||keys.has('ArrowUp'))-Number(keys.has('KeyS')||keys.has('ArrowDown'));
- const lateral=Number(keys.has('KeyD')||keys.has('ArrowRight'))-Number(keys.has('KeyA')||keys.has('ArrowLeft'));
- const length=Math.hypot(forward,lateral);
+ // Share the exact eight-way movement math from the WildTrap editor.
+ // Lobby keeps its fixed-camera, world-aligned controls.
+ const move=movementAxes(keys,state.area==='home'?0:state.yaw);
  let moving=false;
- if(!open&&length){
+ if(!open&&move.moving){
   const roomSpeed=(keys.has('ShiftLeft')||keys.has('ShiftRight'))?6:3.8;
   const speed=state.area==='home'?roomSpeed:roomSpeed*.5;
-  const f=forward/length,r=lateral/length;
-  // The room uses fixed world directions; the hunt follows camera yaw.
-  // state.y was undefined and made player/camera coordinates NaN.
-  const heading=state.area==='home'?0:state.yaw;
-  const dx=(f*Math.sin(heading)+r*Math.cos(heading))*speed*dt;
-  const dz=(-f*Math.cos(heading)+r*Math.sin(heading))*speed*dt;
+  const dx=move.x*speed*dt,dz=move.z*speed*dt;
   const x=avatar.position.x+dx,z=avatar.position.z+dz;
   const oldX=avatar.position.x,oldZ=avatar.position.z;
   if(state.area==='home'){
@@ -393,12 +389,10 @@ function frame(){
   // At room limits the player must not run against the wall in place.
   const traveledX=avatar.position.x-oldX,traveledZ=avatar.position.z-oldZ;
   moving=Math.hypot(traveledX,traveledZ)>1e-7;
-  if(moving)avatar.rotation.y=-Math.atan2(traveledX,-traveledZ);
+  if(moving)avatar.rotation.y=-movementHeading(traveledX,traveledZ);
  }
- // In the room, all movement keys use the same run clip (W/A/S/D and
- // diagonals); the character turns to match travel. Hunting retains
- // its previous W-only run trigger until its animations are designed.
- // The same in-place run clip plays for all eight directions in both areas.
+ // Same in-place run clip on W/A/S/D and diagonals, in both areas.
+ // Only the facing direction changes; running stops when movement stops.
  animateAvatar(shouldRunAnimation({area:state.area,moving,forwardKey:keys.has('KeyW')||keys.has('ArrowUp')}));
  if(state.mixer)state.mixer.update(dt);
  if(state.area==='home'&&!open){
