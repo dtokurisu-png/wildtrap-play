@@ -353,12 +353,8 @@ canvas.addEventListener('pointercancel',()=>state.drag=false);
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
 function resize(){const w=Math.max(1,canvas.clientWidth),h=Math.max(1,canvas.clientHeight);renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
 window.addEventListener('resize',resize);
-function frame(){
- requestAnimationFrame(frame);
- const dt=Math.min(clock.getDelta(),.06);
- const open=state.screen!=='none';
- // Share the exact eight-way movement math from the WildTrap editor.
- // Lobby keeps its fixed-camera, world-aligned controls.
+// Single movement function shared by real frames and deterministic browser tests.
+function stepMovement(dt,open){
  const move=movementAxes(keys,state.area==='home'?0:state.yaw);
  let moving=false;
  if(!open&&move.moving){
@@ -395,6 +391,15 @@ function frame(){
  // Same in-place run clip on W/A/S/D and diagonals, in both areas.
  // Only the facing direction changes; running stops when movement stops.
  animateAvatar(shouldRunAnimation({area:state.area,moving,forwardKey:keys.has('KeyW')||keys.has('ArrowUp')}));
+ return moving;
+}
+function frame(){
+ requestAnimationFrame(frame);
+ const dt=Math.min(clock.getDelta(),.06);
+ const open=state.screen!=='none';
+ // Share the exact eight-way movement math from the WildTrap editor.
+ // Lobby keeps its fixed-camera, world-aligned controls.
+ stepMovement(dt,open);
  if(state.mixer)state.mixer.update(dt);
  if(state.area==='home'&&!open){
   const nearDoor=getDoorDistance()<3.9,nearPet=getPetDistance()<2.8,nearBed=getBedDistance()<3.1;
@@ -416,42 +421,6 @@ function frame(){
  }
  occlusion.update(dt);
  renderer.render(scene,camera);
- // Browser E2E: exercise actual hunting movement and animation in 8 directions.
- if(state.smokeHuntDirections){
-  const test=state.smokeHuntDirections;
-  const directions=[['KeyW'],['KeyS'],['KeyA'],['KeyD'],
-   ['KeyW','KeyA'],['KeyW','KeyD'],['KeyS','KeyA'],['KeyS','KeyD']];
-  const activeKeys=directions[test.index];
-  if(!activeKeys){
-   keys.clear();
-   document.documentElement.dataset.huntDirections='PASS';
-   document.documentElement.dataset.huntDirectionsChecked='8';
-   state.smokeHuntDirections=null;
-  }else if(test.frames===0){
-   keys.clear();for(const key of activeKeys)keys.add(key);
-   test.before=avatar.position.clone();test.frames++;
-  }else if(test.frames<2){
-   test.frames++;
-  }else{
-   const change=avatar.position.clone().sub(test.before);
-   const actual=new THREE.Vector2(change.x,change.z);
-   const expected=movementAxes(new Set(activeKeys),state.yaw);
-   const dot=actual.x*expected.x+actual.y*expected.z;
-   const length=actual.length();
-   const heading=movementHeading(expected.x,expected.z);
-   const difference=Math.atan2(Math.sin(avatar.rotation.y+heading),Math.cos(avatar.rotation.y+heading));
-   const hasAnimation=!state.mixer||state.running;
-   // Software-rendered Chrome may issue a zero-time frame; check the actual
-   // facing and run-state for every key, and displacement whenever dt > 0.
-   if((length>1e-4&&dot/length<.999)||Math.abs(difference)>.001||!hasAnimation){
-    document.documentElement.dataset.huntDirections='FAIL';
-    document.documentElement.dataset.huntDirectionsError='Falló '+activeKeys.join('+')+
-     ' · desplazamiento '+length.toFixed(5)+' · orientación '+difference.toFixed(4)+
-     ' · animación '+hasAnimation;
-    keys.clear();state.smokeHuntDirections=null;
-   }else{test.index++;test.frames=0;keys.clear();}
-  }
- }
  if(state.smokeRoomCameraStart){
   const origin=state.smokeRoomCameraStart;
   if(avatar.position.distanceTo(origin)>.25){
@@ -495,8 +464,29 @@ if(['solo','hunt-directions'].includes(new URLSearchParams(location.search).get(
     throw Error('Hunt scene did not appear with frozen map');
    $('missionContinue').click();
    if(state.screen!=='none')throw Error('Mission conditions did not close');
-   if(new URLSearchParams(location.search).get('smoke')==='hunt-directions')
-    state.smokeHuntDirections={index:0,frames:0,before:null};
+   if(new URLSearchParams(location.search).get('smoke')==='hunt-directions'){
+    // Exercise the same movement function with a fixed time step. Browser GPU
+    // scheduling can produce zero-time frames, so don't rely on RAF frame count.
+    const dirs=[['KeyW'],['KeyS'],['KeyA'],['KeyD'],
+     ['KeyW','KeyA'],['KeyW','KeyD'],['KeyS','KeyA'],['KeyS','KeyD']];
+    for(const codes of dirs){
+     keys.clear();for(const code of codes)keys.add(code);
+     const before=avatar.position.clone();
+     stepMovement(.10,false);
+     const delta=avatar.position.clone().sub(before);
+     const expected=movementAxes(new Set(codes),state.yaw);
+     const distance=Math.hypot(delta.x,delta.z);
+     const alignment=(delta.x*expected.x+delta.z*expected.z)/(distance||1);
+     const angle=movementHeading(expected.x,expected.z);
+     const angularError=Math.atan2(Math.sin(avatar.rotation.y+angle),Math.cos(avatar.rotation.y+angle));
+     if(distance<.05||alignment<.999||Math.abs(angularError)>.001||
+       (state.mixer&&!state.running))
+      throw Error('Movimiento de cacería incorrecto: '+codes.join('+'));
+    }
+    keys.clear();stepMovement(.10,false);
+    document.documentElement.dataset.huntDirections='PASS';
+    document.documentElement.dataset.huntDirectionsChecked='8';
+   }
    document.documentElement.dataset.smoke='PASS';
    document.documentElement.dataset.smokeVersion=state.session.mapVersion;
   }catch(error){
