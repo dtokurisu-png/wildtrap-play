@@ -92,7 +92,10 @@ jobs:
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
+          name: wildtrap-play-${{ github.run_id }}-${{ github.run_attempt }}
           path: _site
       - name: Deploy pages
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          artifact_name: wildtrap-play-${{ github.run_id }}-${{ github.run_attempt }}
