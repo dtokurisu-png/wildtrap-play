@@ -1,14 +1,20 @@
 {
   "schemaVersion": 1,
-  "activeVersion": "v001",
-  "activePath": "maps/versions/v001.json",
-  "publishedAt": "2026-11-14T00:00:00Z",
+  "activeVersion": "wt-1600533f16f2",
+  "activePath": "maps/versions/wt-1600533f16f2.json",
+  "publishedAt": "2026-11-19T00:00:00Z",
   "releases": [
     {
       "id": "v001",
       "path": "maps/versions/v001.json",
       "source": "wildtrap-escenario (1).json",
       "notes": "Initial user-approved baseline: 630x630; 1 player spawn; 1 cave"
+    },
+    {
+      "id": "wt-1600533f16f2",
+      "path": "maps/versions/wt-1600533f16f2.json",
+      "source": "wildtrap/main:assets/terrain/wildtrap-mobile-world.json",
+      "notes": "Escenario actualizado desde WildTrap: materiales, zonas, cortes, acantilados, spawns"
     }
   ]
 }

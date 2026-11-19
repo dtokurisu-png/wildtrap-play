@@ -44,3 +44,11 @@ El propietario del repositorio debe abrir **Settings → Pages** de `dtokurisu-p
 ## Pruebas
 
 `Validate published WildTrap map` ejecuta validación de JSON, sintaxis de scripts y una prueba de Chrome que recorre automáticamente **habitación → puerta → selección Solo → creación de sala → mapa publicado → misión**. Puede repetirse localmente con un servidor HTTP y `node tests/browser-solo-flow.mjs`. La URL `?smoke=solo` ejecuta el mismo recorrido automatizado para diagnóstico.
+
+## Migración sincronizada desde WildTrap
+
+El código y los assets actualizados del editor se publican completos bajo `/wildtrap-play/engine/`, sin sobrescribir la habitación, tienda ni salas del repositorio Play. La prueba táctil instalable inicia en `engine/mobile.html`.
+
+El workflow `Publish and sync WildTrap Play` copia la última versión de `dtokurisu-png/wildtrap`, sincroniza `assets/terrain/wildtrap-mobile-world.json` con `maps/current.json` y crea una versión inmutable `wt-<hash>` en `maps/versions/`. Se ejecuta en cambios de Play, manualmente y cada 30 minutos. Una sala existente conserva la versión que tenía fijada. Las actualizaciones a móviles se notifican una vez desplegadas a Pages mediante `engine/version.json`.
+
+La sincronización no accede al borrador local del editor; el escenario debe estar **confirmado en el repositorio WildTrap**. Las tareas programadas de GitHub pueden ejecutarse con retraso.

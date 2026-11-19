@@ -1,31 +1,81 @@
-name: Publish WildTrap Play demo
+name: Publish and sync WildTrap Play
 on:
   push:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    - cron: '*/30 * * * *'
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 concurrency:
   group: wildtrap-play-pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
+      - name: Checkout Play (the lobby/game repository)
+        uses: actions/checkout@v4
         with:
-          enablement: true
-      - name: Upload game and published maps
-        uses: actions/upload-pages-artifact@v3
+          persist-credentials: true
+      - name: Checkout authoritative WildTrap (all engine and art assets)
+        uses: actions/checkout@v4
         with:
-          path: .
-      - name: Deploy
+          repository: dtokurisu-png/wildtrap
+          ref: main
+          path: .wildtrap-upstream
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Sync WildTrap world and keep immutable Play map history
+        run: node scripts/sync-wildtrap.mjs
+      - name: Validate current Play map
+        run: |
+          node --input-type=module <<'EOF'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const m=JSON.parse(fs.readFileSync('maps/manifest.json','utf8'));
+          assert.deepEqual(JSON.parse(fs.readFileSync('maps/current.json','utf8')),JSON.parse(fs.readFileSync(m.activePath,'utf8')));
+          assert.ok(m.releases.some(r=>r.id===m.activeVersion));
+          console.log('Active map verified:',m.activeVersion);
+          EOF
+      - name: Commit synchronized snapshot to Play
+        run: |
+          if ! git diff --quiet -- maps/manifest.json maps/current.json || [ -n "$(git ls-files --others --exclude-standard maps/versions/)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add maps/manifest.json maps/current.json maps/versions/
+            git commit -m "Sync published Play world with WildTrap main"
+            git push origin HEAD:main
+          fi
+      - name: Prepare full WildTrap game engine and Play lobby
+        run: |
+          mkdir -p _site/engine
+          rsync -a --exclude='.git' --exclude='.github' --exclude='_site' --exclude='.wildtrap-upstream' --exclude='tests' ./ _site/
+          rsync -a --exclude='.git' --exclude='.github' .wildtrap-upstream/ _site/engine/
+          node --input-type=module <<'EOF'
+          import fs from 'node:fs';
+          import {execFileSync} from 'node:child_process';
+          const version={
+            build:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim()+':'+
+                  execFileSync('git',['-C','.wildtrap-upstream','rev-parse','HEAD'],{encoding:'utf8'}).trim(),
+            publishedAt:new Date().toISOString(),
+            source:'dtokurisu-png/wildtrap',
+            release:JSON.parse(fs.readFileSync('maps/manifest.json','utf8')).activeVersion
+          };
+          fs.writeFileSync('_site/version.json',JSON.stringify(version));
+          fs.writeFileSync('_site/engine/version.json',JSON.stringify(version));
+          EOF
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - name: Deploy pages
         id: deployment
         uses: actions/deploy-pages@v4
