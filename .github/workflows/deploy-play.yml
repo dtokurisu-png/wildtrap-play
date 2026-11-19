@@ -5,6 +5,14 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '*/30 * * * *'
+  # While Pages is configured for legacy branch builds, its automatic
+  # deployment can overwrite our merged engine artifact. Redeploy only
+  # AFTER that deployment finishes. Switch Settings > Pages > Source to
+  # GitHub Actions to permanently eliminate the extra legacy deployment.
+  workflow_run:
+    workflows: ["pages build and deployment"]
+    types: [completed]
+    branches: [main]
 permissions:
   contents: write
   pages: write
