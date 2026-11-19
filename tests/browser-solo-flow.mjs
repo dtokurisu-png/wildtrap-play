@@ -1,5 +1,7 @@
 import {spawnSync} from 'node:child_process';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const activeVersion=JSON.parse(readFileSync(new URL('../maps/manifest.json',import.meta.url),'utf8')).activeVersion;
 const executable=['google-chrome','google-chrome-stable','chromium'].find(c=>
  spawnSync('which',[c],{encoding:'utf8'}).status===0);
 assert.ok(executable,'Chrome browser is required');
@@ -33,7 +35,7 @@ for(const [name,url] of [['lobby',base],['solo',base+'?smoke=solo'],['room-camer
   const reason=html.match(/data-smoke-error="([^"]+)"/)?.[1];
   console.log('Solo E2E smoke',status,reason||'');
   assert.equal(status,'PASS','Door → solo room → published arena failed: '+reason);
-  assert.match(html,/data-smoke-version="v001"/,'Wrong pinned map version');
+  assert.match(html,new RegExp('data-smoke-version="'+activeVersion+'"'),'Wrong pinned map version');
  }
  console.log('PASS '+name);
 }

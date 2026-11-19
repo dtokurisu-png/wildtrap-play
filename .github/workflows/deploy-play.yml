@@ -33,6 +33,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Verify mobile source and installable assets
+        run: |
+          node --check .wildtrap-upstream/mobile.mjs
+          node --check .wildtrap-upstream/mobile-cliffs.mjs
+          node --check .wildtrap-upstream/mobile-install.mjs
+          node --check .wildtrap-upstream/sw.js
+          test -f .wildtrap-upstream/manifest.webmanifest
+          test -f .wildtrap-upstream/icons/wildtrap-192.png
+          test -f .wildtrap-upstream/icons/wildtrap-512.png
       - name: Sync WildTrap world and keep immutable Play map history
         run: node scripts/sync-wildtrap.mjs
       - name: Validate current Play map
