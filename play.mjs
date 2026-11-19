@@ -53,12 +53,7 @@ function textTexture(text,bg='#113d31',fg='#d6fff1'){
 }
 function sign(parent,label,x,y,z){const mat=new THREE.MeshBasicMaterial({map:textTexture(label),side:THREE.DoubleSide});
  const plane=new THREE.Mesh(new THREE.PlaneGeometry(3.8,.95),mat);plane.position.set(x,y,z);parent.add(plane);return plane;}
-let huntVisuals=null,visualSerial=0;
-function clearHuntVisuals(){
- visualSerial++;
- huntVisuals?.dispose?.();huntVisuals=null;
-}
-function clearStage(){clearHuntVisuals();occlusion.reset();while(stage.children.length){const item=stage.children[0];stage.remove(item);
+function clearStage(){occlusion.reset();while(stage.children.length){const item=stage.children[0];stage.remove(item);
  item.traverse?.(node=>{node.geometry?.dispose?.();if(node.material&&node.userData?.disposeMaterial){node.material.dispose?.();}});}
 }
 function buildLobby(){
@@ -118,8 +113,7 @@ function buildTerrainGeometry(map){
  const v=mesh.getAttribute('position'),colors=new Float32Array(n*n*3);
  const color=new THREE.Color();
  for(let i=0;i<n*n;i++){
-  const h=map.heights[i],offset=map.terrainVertexOffsets?.[i];
-  v.setXYZ(i,v.getX(i)+(Number(offset?.[0])||0),h,v.getZ(i)+(Number(offset?.[1])||0));
+  const h=map.heights[i];v.setY(i,h);
   const grass=clamp(.34+h*.0018,.32,.60);
   color.setRGB(grass*.54,grass*.90,grass*.65);
   colors[i*3]=color.r;colors[i*3+1]=color.g;colors[i*3+2]=color.b;
@@ -179,9 +173,6 @@ function buildHunt(map,spawn){
  scene.background.setHex(0xb7cbbf);scene.fog=new THREE.FogExp2(0xa9c5b7,.0022);
  const ground=new THREE.Mesh(buildTerrainGeometry(map),new THREE.MeshLambertMaterial({vertexColors:true,side:THREE.DoubleSide}));
  ground.name='Published map geometry';stage.add(ground);
- // Restore the same cliffs, biome shader and artwork as the WildTrap editor.
- // The fallback remains playable if the shared engine has not been deployed.
- void enhanceHuntTerrain(map,ground);
  for(const node of map.nodes||[])if(node.kind==='prefab')void addPrefab(node,map);
  // Spawn marker only in the demo; real multiplayer can hide this reference.
  const circle=geo(new THREE.TorusGeometry(1.55,.09,10,48),0x00f0bb,{emissive:0x008866,emissiveIntensity:.35});
@@ -189,39 +180,6 @@ function buildHunt(map,spawn){
  avatar.position.set(spawn.x,heightAt(map,spawn.x,spawn.z),spawn.z);
  state.lookTarget.copy(avatar.position).add(new THREE.Vector3(0,1.3,0));
  updateHud();
-}
-async function enhanceHuntTerrain(map,ground){
- const ticket=visualSerial;
- let colors=null,painter=null,overlay=null;
- const assetURL=url=>url.startsWith('./assets/')?'./engine/'+url.slice(2):url;
- try{
-  const [{applyMobileCliffs},{createTerrainTexturePainter},{createTerrainHandpaintOverlay}]=await Promise.all([
-   import('./engine/mobile-cliffs.mjs'),
-   import('./engine/editor-terrain-texture-renderer.mjs'),
-   import('./engine/terrain-handpaint-overlay.mjs')
-  ]);
-  if(ticket!==visualSerial||state.area!=='hunt')return;
-  const cliff=await applyMobileCliffs({terrain:ground,scene,live:map,getTextureAssetUrl:assetURL});
-  colors=cliff.colors;
-  if(ticket!==visualSerial||state.area!=='hunt'){colors.dispose();return}
-  painter=createTerrainTexturePainter({scene,terrain:ground,renderer,material:ground.material,
-   intangibleMaterial:ground.material,live:map,isTesting:()=>true,
-   getTextureAssetUrl:assetURL,toast:message=>console.warn(message)});
-  overlay=createTerrainHandpaintOverlay({renderer,scene,getTextureAssetUrl:assetURL});
-  overlay.subscribe(texture=>painter?.setHandpaintTexture(texture));
-  let paint={};
-  try{paint=JSON.parse(localStorage.getItem('wildtrap-handpaint-controls-v1')||'{}')||{}}catch(_){}
-  const setting=(key,def,min,max)=>Math.max(min,Math.min(max,Number.isFinite(Number(paint[key]))&&paint[key]!==undefined?Number(paint[key]):def));
-  painter.setHandpaintSettings({rotation:setting('rotation',180,0,360),
-   opacity:setting('opacity',90,0,100)/100,blendMode:setting('blendMode',3,0,7),
-   contrast:setting('contrast',160,0,400)/100});
-  painter.setEnabled(map.settings?.biomeTexturesVisible!==false);
-  window.__terrainHydrated=true;
-  huntVisuals={handpaint:overlay,dispose(){painter.dispose();colors.dispose();overlay.dispose()}};
- }catch(error){
-  painter?.dispose?.();colors?.dispose?.();overlay?.dispose?.();
-  console.warn('WildTrap Play: render avanzado no disponible; se mantiene el terreno original',error);
- }
 }
 function fallbackAvatar(){
  const shell=new THREE.Group();
@@ -491,8 +449,7 @@ function frame(){
   camera.position.lerp(desired,1-Math.exp(-dt*8));camera.lookAt(state.lookTarget);
  }
  occlusion.update(dt);
- if(state.area==='hunt'&&huntVisuals?.handpaint)huntVisuals.handpaint.render(camera);
- else renderer.render(scene,camera);
+ renderer.render(scene,camera);
  if(state.smokeRoomCameraStart){
   const origin=state.smokeRoomCameraStart;
   if(avatar.position.distanceTo(origin)>.25){
