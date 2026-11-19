@@ -3,14 +3,11 @@ import {roomCameraPose,roomCameraDistance,ROOM_CAMERA_OFFSET} from '../room-came
 const approx=(a,b)=>Math.abs(a-b)<1e-9;
 const a=roomCameraPose({x:0,y:0,z:5.7});
 const b=roomCameraPose({x:7.3,y:0,z:-6});
-assert.ok(approx(a.position.x-a.target.x,ROOM_CAMERA_OFFSET.x));
-assert.ok(approx(a.position.z-a.target.z,ROOM_CAMERA_OFFSET.z));
-for(const key of ['x','y','z']){
- const before=a.position[key]-a.target[key];
- const after=b.position[key]-b.target[key];
- assert.ok(approx(before,after),'Moving must not change room camera direction: '+key);
-}
-const dist=v=>Math.hypot(v.position.x-v.target.x,v.position.y-v.target.y,v.position.z-v.target.z);
-assert.ok(approx(dist(a),roomCameraDistance()));
-assert.ok(approx(dist(b),dist(a)),'Camera distance must remain exactly constant');
-console.log('PASS: fixed room-camera direction, constant distance across character motion');
+for(const pose of [a,b])for(const axis of ['x','y','z'])
+ assert.ok(approx(pose.position[axis],ROOM_CAMERA_OFFSET[axis]),'Fixed room camera must not translate: '+axis);
+assert.ok(approx(a.target.z,5.7),'Focus tracks original room spawn');
+assert.ok(approx(b.target.x,7.3),'Focus tracks player outside framing dead zone');
+const origin=roomCameraPose({x:0,y:0,z:0});
+const distance=Math.hypot(origin.position.x-origin.target.x,origin.position.y-origin.target.y,origin.position.z-origin.target.z);
+assert.ok(approx(distance,roomCameraDistance()),'Reference camera distance matches origin');
+console.log('PASS: fixed room camera position and player-follow focus');
